@@ -1,10 +1,18 @@
 
 #include <string.h>
 #include <stdio.h>
-
 #include <unistd.h>
+#include "EasyPIO.h"
 #include <termios.h>
 #include <fcntl.h>
+
+const char led[] = {14,15,18,23,24,25,8,7};
+
+void limpiarBuffer() {
+    int ch;
+    while ((ch = getchar()) != EOF && ch != '\n');
+}
+
 
 // Función para detectar si se presionó una tecla
 int kbhit(void)
@@ -38,6 +46,29 @@ int kbhit(void)
     }
 
     return 0;
+}
+
+
+int leds(int num){
+  int i, numval;
+
+  for(i=0; i<8; i++){
+  // Write the number to the 8 LEDs
+    numval = (num >> i) & 0x01;
+    digitalWrite(led[i], numval);
+  }
+  return 0;
+}
+
+void disp_binary(int i)
+{
+    int t;
+    for (t = 128; t > 0; t = t / 2)
+        if (i & t)
+            printf("*");
+        else
+            printf("_");
+    printf("\n");
 }
 
 void delay(int *a)
@@ -77,7 +108,7 @@ int Login()
 
         for (int i = 0; i < cantidad_caracteres; i++)
         {
-            char c = getch();
+            char c = getchar();
             password_ingresado[i] = c;
             printf("*"); // Mostrar asterisco en lugar del caracter
         }
@@ -102,16 +133,6 @@ int Login()
     return 0;
 }
 
-void disp_binary(int i)
-{
-    int t;
-    for (t = 128; t > 0; t = t / 2)
-        if (i & t)
-            printf("*");
-        else
-            printf("_");
-    printf("\n");
-}
 
 void choqueLuces()
 {
@@ -128,7 +149,6 @@ void choqueLuces()
 
 void autofan()
 {
-    printf("Autofan activado.\n");
     static int tiempo = 2000;
     unsigned int c = 0x80;
 
@@ -148,8 +168,17 @@ void autofan()
     }
 }
 
+
+
+
 int main()
-{
+{ 
+    pioInit();
+    for(int i=0; i<8; i++){
+    pinMode(led[i], OUTPUT); // Configure los 8 pines para los LEDs como salidas en main
+    }
+    leds(0xFF);
+
 
     if (!Login())
     {
@@ -176,14 +205,22 @@ int main()
             choqueLuces();
             break;
         case 2:
-            autofan();
-            break;
-        case 3:
+        limpiarBuffer();
             do
             {
+                autofan();
+            } while (!kbhit());
+            
+            
+            break;
+        case 3:
+        limpiarBuffer();
+            do
+            {
+                
                 printf(" probando");
-                // pulso2();
-            } while (!getchar());
+                pulso2();
+            } while (!kbhit());
             ;
             break;
         case 0:
@@ -195,3 +232,5 @@ int main()
         }
     } while (opcion != 0);
 }
+
+
