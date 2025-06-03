@@ -1,6 +1,44 @@
-#include <conio.h>
+
 #include <string.h>
 #include <stdio.h>
+
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
+
+// Función para detectar si se presionó una tecla
+int kbhit(void)
+{
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    // Guardar configuración actual del terminal
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+
+    // Desactivar el modo canónico y el eco
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    // Establecer stdin como no bloqueante
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    // Restaurar configuración del terminal
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (ch != EOF)
+    {
+        ungetc(ch, stdin); // Devolver el carácter al buffer
+        return 1;
+    }
+
+    return 0;
+}
 
 void delay(int *a)
 {
@@ -19,8 +57,9 @@ void menu()
 {
     printf("MENU");
     printf("\n1. Choque Luces");
-    printf("\n2. Opcion 2");
+    printf("\n2. Autofan");
     printf("\n3. Opcion 3");
+    printf("\n0. Salir");
 
     printf("\n");
 }
@@ -81,9 +120,31 @@ void choqueLuces()
     unsigned char bits[8] = {0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81};
     for (int i = 0; i < 8; i++)
     {
-        system("cls"); // Clear the console
+        // system("cls"); // Clear the console
         disp_binary(bits[i]);
         delay(&tiempo);
+    }
+}
+
+void autofan()
+{
+    printf("Autofan activado.\n");
+    static int tiempo = 2000;
+    unsigned int c = 0x80;
+
+    for (int i = 0; i < 7; i++)
+    {
+        // system("cls"); // Clear the console
+        disp_binary(c);
+        delay(&tiempo);
+        c = c >> 1;
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        disp_binary(c);
+        delay(&tiempo);
+        c = c << 1;
     }
 }
 
@@ -115,10 +176,15 @@ int main()
             choqueLuces();
             break;
         case 2:
-            printf("Opcion 2 seleccionada.\n");
+            autofan();
             break;
         case 3:
-            printf("Opcion 3 seleccionada.\n");
+            do
+            {
+                printf(" probando");
+                // pulso2();
+            } while (!getchar());
+            ;
             break;
         case 0:
             printf("Saliendo del programa.\n");
